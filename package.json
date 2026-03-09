@@ -1,0 +1,22 @@
+{
+  "name": "figma-design-skill-plugin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Figma plugin that generates a design system SKILL.md from a guided form.",
+  "scripts": {
+    "build": "node esbuild.config.js",
+    "watch": "node esbuild.config.js --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@figma/plugin-typings": "^1.117.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.7.2"
+  }
+}

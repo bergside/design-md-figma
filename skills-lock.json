@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "figma-plugin": {
+      "source": "srstomp/pokayokay",
+      "sourceType": "github",
+      "computedHash": "b9ebc43a76ec971399cdcb22dbe8169a10e5452f63fd93a47ff85ff2eaef0162"
+    }
+  }
+}
