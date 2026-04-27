@@ -1,13 +1,10 @@
-# Figma Design Guideline Extractor Plugin
+# DESIGN.md generator for Figma - TypeUI
 
-This plugin automatically extracts local Figma design foundations (styles, variables, and component families) and generates two editable markdown drafts:
+This Figma plugin extracts local styles and system signals from the current file and generates editable `DESIGN.md` and `SKILL.md` outputs that you can use with tools such as Google Stitch, Claude Code, Codex, and others to build interfaces with a consistent design-system blueprint. The generated files are based on the open-source [TypeUI DESIGN.md](https://www.typeui.sh/design-md) format.
 
-- `DESIGN.md`
-- `SKILL.md`
+## Getting started
 
-Both outputs can be edited directly inside the plugin, copied to clipboard, or downloaded.
-
-## Run locally
+Load the plugin in Figma Desktop:
 
 1. Install dependencies:
 
@@ -15,27 +12,75 @@ Both outputs can be edited directly inside the plugin, copied to clipboard, or d
    npm install
    ```
 
-2. Build plugin assets:
+2. Build the plugin:
 
    ```bash
    npm run build
    ```
 
 3. In Figma Desktop:
-   - Go to Plugins > Development > Import plugin from manifest...
-   - Select `manifest.json` from this repository.
-   - Run **Design MD Skill Generator**.
+   1. Open **Plugins -> Development -> Import plugin from manifest...**
+   2. Select `manifest.json` from this project
+   3. Run **Design MD Skill Generator**
 
-## Usage
+## Curated design skills
 
-1. Open any Figma file with local styles/variables.
-2. Run the plugin.
-3. The plugin extracts guidelines automatically.
-4. Edit the generated `DESIGN.md` and `SKILL.md` content.
-5. Copy or download each file.
+Check out curated design systems at [typeui.sh/design-skills](https://www.typeui.sh/design-skills).
 
-## Development
+## Available actions
 
-- Build once: `npm run build`
-- Watch mode: `npm run watch`
-- Typecheck: `npm run typecheck`
+| Action | Description |
+| --- | --- |
+| Auto-extract | Reads local styles and variables from the active Figma file (colors, typography, spacing, radius, effects, grids, component families). |
+| Generate `DESIGN.md` | Produces editable design-guideline markdown from extracted file signals. |
+| Generate `SKILL.md` | Produces editable agent-ready markdown from extracted file signals. |
+| Toggle view | Switches between `DESIGN.md` and `SKILL.md` in a single editor panel. |
+| Refresh | Re-runs extraction for the current Figma file state. |
+| Download | Saves generated output as `DESIGN.md` or `SKILL.md`. |
+
+## Generated file structure
+
+The plugin generates two markdown files with consistent structure.
+
+### `DESIGN.md`
+
+| Section | What it does |
+| --- | --- |
+| `Source` | Captures file/page origin and extraction timestamp. |
+| `Variable Collections` | Lists local Figma variable collections used for tokens. |
+| `Color Tokens` | Lists extracted paint styles and color variables. |
+| `Typography Tokens` | Lists extracted text styles and type scales. |
+| `Spacing / Radius / Motion Tokens` | Lists layout and motion-related token signals. |
+| `Effect Styles` | Lists shadows, blur, and effect style signals. |
+| `Grid Styles` | Lists extracted layout grid definitions. |
+| `Component Families` | Lists discovered component-set family names. |
+
+### `SKILL.md`
+
+| Section | What it does |
+| --- | --- |
+| `Mission` | Defines the design-system objective for the extracted Figma file. |
+| `Brand` | Captures product/brand context, audience, and product surface. |
+| `Style Foundations` | Lists inferred visual tokens and foundations. |
+| `Accessibility` | Applies WCAG 2.2 AA requirements and interaction constraints. |
+| `Writing Tone` | Sets guidance tone for implementation-ready output. |
+| `Rules: Do` | Lists required implementation practices. |
+| `Rules: Don't` | Lists anti-patterns and prohibited behavior. |
+| `Guideline Authoring Workflow` | Defines ordered guideline authoring steps. |
+| `Required Output Structure` | Enforces consistent output sections. |
+| `Component Rule Expectations` | Defines required interaction/state details. |
+| `Quality Gates` | Adds testable quality and consistency checks. |
+
+## Local development
+
+Common local commands:
+
+```bash
+npm run build
+npm run watch
+npm run typecheck
+```
+
+## License
+
+This project is open-source under the MIT License.
