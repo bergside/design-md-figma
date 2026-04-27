@@ -24,21 +24,35 @@ export interface SkillFormState {
   includeTypeUiNote: boolean;
 }
 
-export type WizardStepId =
-  | "identity"
-  | "brand"
-  | "foundations"
-  | "components"
-  | "accessibility"
-  | "rules"
-  | "review";
-
-export interface WizardStep {
-  id: WizardStepId;
-  title: string;
+export interface ExtractedStyleGuidelines {
+  fileName: string;
+  pageName: string;
+  extractedAt: string;
+  colorTokens: string[];
+  typographyTokens: string[];
+  spacingTokens: string[];
+  radiusTokens: string[];
+  motionTokens: string[];
+  effectTokens: string[];
+  gridTokens: string[];
+  componentFamilies: string[];
+  variableCollections: string[];
 }
 
-export type UIToMainMessage = { type: "close-plugin" } | { type: "resize-ui"; width: number; height: number };
+export interface ExtractionResult {
+  styleGuidelines: ExtractedStyleGuidelines;
+  formState: SkillFormState;
+}
+
+export type UIToMainMessage =
+  | { type: "close-plugin" }
+  | { type: "resize-ui"; width: number; height: number }
+  | { type: "extract-guidelines" };
+
+export type MainToUIMessage =
+  | { type: "extraction-started" }
+  | { type: "extraction-success"; payload: ExtractionResult }
+  | { type: "extraction-error"; error: string };
 
 export const DEFAULT_FORM_STATE: SkillFormState = {
   skillNameScope: "brand-or-scope",

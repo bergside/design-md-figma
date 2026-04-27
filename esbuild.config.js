@@ -11,7 +11,7 @@ async function buildUI() {
     entryPoints: [path.join(__dirname, "src", "ui.tsx")],
     bundle: true,
     outfile: path.join(distDir, "ui.js"),
-    target: "es2020",
+    target: "es2017",
     format: "iife",
     loader: {
       ".tsx": "tsx",
@@ -41,7 +41,7 @@ async function buildMain() {
     entryPoints: [path.join(__dirname, "src", "code.ts")],
     bundle: true,
     outfile: path.join(distDir, "code.js"),
-    target: "es2020",
+    target: "es2017",
     format: "iife",
     minify: false
   });
@@ -59,7 +59,7 @@ async function run() {
     entryPoints: [path.join(__dirname, "src", "code.ts")],
     bundle: true,
     outfile: path.join(distDir, "code.js"),
-    target: "es2020",
+    target: "es2017",
     format: "iife"
   });
 
@@ -67,7 +67,7 @@ async function run() {
     entryPoints: [path.join(__dirname, "src", "ui.tsx")],
     bundle: true,
     outfile: path.join(distDir, "ui.js"),
-    target: "es2020",
+    target: "es2017",
     format: "iife"
   });
 

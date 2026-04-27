@@ -1,8 +1,10 @@
 {
-  "name": "figma-design-skill-plugin",
+  "name": "design-md-figma",
   "version": "1.0.0",
-  "private": true,
-  "description": "Figma plugin that generates a design system SKILL.md from a guided form.",
+  "repository": "https://github.com/bergside/design-md-figma",
+  "author": "Bergside",
+  "license": "MIT",
+  "description": "Figma plugin that generates a design system SKILL.md and DESIGN.md files for AI tools such as Google Stitch, Claude Design, Codex, Cursor, and more. Based on TypeUI configuration.",
   "scripts": {
     "build": "node esbuild.config.js",
     "watch": "node esbuild.config.js --watch",

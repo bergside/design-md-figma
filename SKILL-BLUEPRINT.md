@@ -1,22 +1,3 @@
-# Design System Skill Blueprint
-
-Canonical source-of-truth blueprint for authoring reusable `skill.md` files for design systems across repositories.
-
-## Purpose
-
-Use this blueprint to keep design-system skills consistent, implementation-ready, and SEO-friendly when published or indexed in docs.
-
-## Authoring Rules
-
-- Keep language concise and operational.
-- Prefer explicit rules over vague styling advice.
-- Use measurable constraints (tokens, states, thresholds).
-- Write in implementation-first order: foundations, components, accessibility, QA.
-- Use consistent terminology across the entire file.
-
-## Required `skill.md` Structure
-
-```md
 ---
 name: design-system-[brand-or-scope]
 description: Creates implementation-ready design-system guidance with tokens, component behavior, and accessibility standards. Use when creating or updating UI rules, component specifications, or design-system documentation.
@@ -41,16 +22,6 @@ One paragraph describing the system objective and target product experience.
 - Color palette: [semantic tokens + values]
 - Spacing scale: [token list]
 - Radius/shadow/motion tokens: [if applicable]
-
-## Component Families
-- buttons
-- inputs
-- forms
-- navigation
-- overlays
-- feedback
-- data display
-- etc.
 
 ## Accessibility
 - Target: WCAG 2.2 AA
@@ -100,26 +71,3 @@ concise, confident, implementation-focused
 - Prefer system consistency over local visual exceptions.
 
 <!-- TYPEUI_SH_MANAGED_END -->
-```
-
-## Repo-Specific Variables To Replace
-
-- `[brand-or-scope]` in `name`
-- System name and mission
-- Token values (typography, colors, spacing, motion)
-- Component family list based on product scope
-- Any framework-specific implementation notes
-
-## Optional Extensions
-
-- `reference.md` for deep component specs and rationale
-- `examples.md` for positive/negative UI examples
-- `scripts/` for linting or validating generated guidance
-
-## Acceptance Checklist
-
-- Frontmatter exists with valid `name` and `description`.
-- Guidance is under 500 lines for `skill.md` when possible.
-- Accessibility and interaction states are explicitly documented.
-- Rules are concrete, testable, and non-ambiguous.
-- Output can be reused in other repositories with only variable replacement.

@@ -40,111 +40,127 @@ body {
   margin: 4px 0 0;
 }
 
-.muted {
-  color: var(--muted);
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.stepper {
+.repo-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 10px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.repo-link svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
+}
+
+.repo-link:hover {
+  border-color: var(--brand);
+}
+
+.toolbar {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
   display: flex;
-  flex-direction: row;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  min-height: 34px;
 }
 
-.step-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
-}
-
-.step-current {
+.info {
   margin: 0;
-  font-size: 12px;
-  color: var(--text);
-  font-weight: 600;
-}
-
-.step-meta {
-  margin: 0;
-  font-size: 11px;
   color: var(--muted);
 }
 
-.step-tools {
+.summary {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
   display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.summary-line {
+  margin: 0;
+}
+
+.doc-toggle {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
-  flex-wrap: nowrap;
-  margin-left: auto;
 }
 
-.step-tools .btn {
-  flex: 0 0 auto;
+.toggle-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font: inherit;
 }
 
-.panel {
+.toggle-btn-active {
+  background: var(--brand);
+  color: var(--brand-text);
+  border-color: transparent;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+}
+
+.doc-panel {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 10px;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  min-height: 470px;
+  min-height: 0;
 }
 
-.panel h2 {
+.doc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.doc-header h2 {
   margin: 0;
   font-size: 13px;
-}
-
-.grid {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-label {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-weight: 500;
-}
-
-input,
-textarea,
-select {
-  width: 100%;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 7px 8px;
-  background: transparent;
-  color: var(--text);
-  font: inherit;
-}
-
-textarea {
-  resize: vertical;
-}
-
-.checkbox {
-  flex-direction: row;
-  align-items: center;
-  gap: 8px;
-  font-weight: 400;
-}
-
-.checkbox input[type="checkbox"] {
-  width: auto;
 }
 
 .actions {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .btn {
@@ -168,15 +184,24 @@ textarea {
   border-color: transparent;
 }
 
-.row {
-  display: flex;
-  gap: 8px;
-}
-
 .preview {
-  min-height: 350px;
+  flex: 1;
+  min-height: 320px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  resize: none;
+  background: transparent;
+  color: var(--text);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 11px;
+  line-height: 1.45;
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
 }
 
 .error {
@@ -189,7 +214,32 @@ textarea {
   color: var(--success);
 }
 
-.info {
+.footer-note {
   margin: 0;
   color: var(--muted);
+}
+
+.footer-note a {
+  color: var(--brand);
+  text-decoration: none;
+}
+
+.footer-note a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 900px) {
+  .header-top {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .preview {
+    min-height: 260px;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

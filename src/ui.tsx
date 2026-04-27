@@ -1,27 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { generateSkillMarkdown } from "./generator";
-import { DEFAULT_FORM_STATE, SkillFormState, UIToMainMessage, WizardStep, WizardStepId } from "./types";
+import { generateDesignMarkdown, generateSkillMarkdown } from "./generator";
+import { ExtractedStyleGuidelines, MainToUIMessage, UIToMainMessage } from "./types";
 
-const STEPS: WizardStep[] = [
-  { id: "identity", title: "Skill Identity" },
-  { id: "brand", title: "Brand" },
-  { id: "foundations", title: "Foundations" },
-  { id: "components", title: "Components" },
-  { id: "accessibility", title: "Accessibility" },
-  { id: "rules", title: "Rules" },
-  { id: "review", title: "Review" }
-];
-
-const STEP_FIELDS: Record<WizardStepId, Array<keyof SkillFormState>> = {
-  identity: ["skillNameScope", "skillDescription", "designSystemName"],
-  brand: ["mission", "brandName", "audience", "productSurface", "productSurfaceOther"],
-  foundations: ["visualStyle", "typographyScale", "colorPalette", "spacingScale", "motionTokens"],
-  components: ["componentFamilies", "includeTypeUiNote"],
-  accessibility: ["accessibilityTarget"],
-  rules: ["writingTone", "rulesDo", "rulesDont", "workflow", "qualityGates"],
-  review: []
-};
+type ExtractionStatus = "idle" | "loading" | "success" | "error";
+type CopyState = "idle" | "copied" | "failed";
+type DocKind = "design" | "skill";
+const PLUGIN_VERSION = "v1.0.0";
+const GITHUB_REPO_URL = "https://github.com/bergside/design-md-figma";
+const TYPEUI_DESIGN_SKILLS_URL = "https://www.typeui.sh/design-skills";
 
 function postToMain(message: UIToMainMessage): void {
   parent.postMessage({ pluginMessage: message }, "*");
@@ -40,444 +27,283 @@ function fallbackCopy(text: string): boolean {
   return ok;
 }
 
-function downloadMarkdown(markdown: string): void {
+async function copyMarkdown(markdown: string): Promise<boolean> {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    await navigator.clipboard.writeText(markdown);
+    return true;
+  }
+
+  return fallbackCopy(markdown);
+}
+
+function downloadMarkdown(markdown: string, fileName: string): void {
   const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = "design-system-skill.md";
+  anchor.download = fileName;
   document.body.appendChild(anchor);
   anchor.click();
   document.body.removeChild(anchor);
   URL.revokeObjectURL(url);
 }
 
-function validateStep(stepIndex: number, state: SkillFormState): string | null {
-  const requiredByStep: Array<Array<keyof SkillFormState>> = [
-    ["skillNameScope", "skillDescription", "designSystemName"],
-    ["mission", "brandName", "audience"],
-    ["visualStyle", "typographyScale", "colorPalette", "spacingScale"],
-    ["componentFamilies"],
-    ["accessibilityTarget"],
-    ["rulesDo", "rulesDont", "workflow", "qualityGates"],
-    [],
-    []
-  ];
-
-  const keys = requiredByStep[stepIndex] || [];
-  const firstInvalid = keys.find((key) => String(state[key]).trim() === "");
-  if (firstInvalid) {
-    return "Please fill in all required fields before continuing.";
+function formatDate(isoDate: string): string {
+  const date = new Date(isoDate);
+  if (Number.isNaN(date.getTime())) {
+    return isoDate;
   }
 
-  if (stepIndex === 1 && state.productSurface === "other" && state.productSurfaceOther.trim() === "") {
-    return "Please provide a custom product surface.";
-  }
-
-  return null;
+  return date.toLocaleString();
 }
 
 function App() {
-  const [stepIndex, setStepIndex] = useState(0);
-  const [formState, setFormState] = useState<SkillFormState>(DEFAULT_FORM_STATE);
+  const [status, setStatus] = useState<ExtractionStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
+  const [guidelines, setGuidelines] = useState<ExtractedStyleGuidelines | null>(null);
+
+  const [generatedDesignMarkdown, setGeneratedDesignMarkdown] = useState<string>("");
+  const [generatedSkillMarkdown, setGeneratedSkillMarkdown] = useState<string>("");
+
+  const [designMarkdown, setDesignMarkdown] = useState<string>("");
+  const [skillMarkdown, setSkillMarkdown] = useState<string>("");
+  const [activeDoc, setActiveDoc] = useState<DocKind>("design");
+
+  const [designCopyState, setDesignCopyState] = useState<CopyState>("idle");
+  const [skillCopyState, setSkillCopyState] = useState<CopyState>("idle");
+
+  const runExtraction = () => {
+    setError(null);
+    postToMain({ type: "extract-guidelines" });
+  };
 
   useEffect(() => {
-    postToMain({ type: "resize-ui", width: 520, height: 760 });
+    postToMain({ type: "resize-ui", width: 980, height: 760 });
+
+    const onMessage = (event: MessageEvent<{ pluginMessage?: MainToUIMessage }>) => {
+      const message = event.data.pluginMessage;
+      if (!message) {
+        return;
+      }
+
+      switch (message.type) {
+        case "extraction-started":
+          setStatus("loading");
+          setError(null);
+          break;
+        case "extraction-success": {
+          setStatus("success");
+          setError(null);
+
+          const nextGuidelines = message.payload.styleGuidelines;
+          const nextSkillState = message.payload.formState;
+          const nextDesignMarkdown = generateDesignMarkdown(nextGuidelines);
+          const nextSkillMarkdown = generateSkillMarkdown(nextSkillState);
+
+          setGuidelines(nextGuidelines);
+          setGeneratedDesignMarkdown(nextDesignMarkdown);
+          setGeneratedSkillMarkdown(nextSkillMarkdown);
+          setDesignMarkdown(nextDesignMarkdown);
+          setSkillMarkdown(nextSkillMarkdown);
+          setDesignCopyState("idle");
+          setSkillCopyState("idle");
+          break;
+        }
+        case "extraction-error":
+          setStatus("error");
+          setError(message.error || "Failed to extract style guidelines.");
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener("message", onMessage);
+    runExtraction();
+
+    return () => {
+      window.removeEventListener("message", onMessage);
+    };
   }, []);
 
-  const markdown = useMemo(() => generateSkillMarkdown(formState), [formState]);
-  const activeStep = STEPS[stepIndex];
-
-  const setField = <K extends keyof SkillFormState>(key: K, value: SkillFormState[K]) => {
-    setFormState((prev) => ({ ...prev, [key]: value }));
-  };
-
-  const randomChoice = <T extends string>(options: readonly T[]): T => options[Math.floor(Math.random() * options.length)];
-
-  const randomizeCurrentStep = () => {
-    setFormState((prev) => {
-      switch (activeStep.id) {
-        case "identity":
-          return {
-            ...prev,
-            skillNameScope: randomChoice(["fintech-web", "saas-dashboard", "commerce-platform", "studio-system"]),
-            designSystemName: randomChoice(["Nova Design System", "Atlas UI", "Horizon Components", "Orbit Interface"]),
-            skillDescription:
-              "Creates implementation-ready design-system guidance with clear tokens, component behavior, and accessibility standards for production teams."
-          };
-        case "brand":
-          return {
-            ...prev,
-            mission: randomChoice([
-              "Provide a cohesive, scalable interface system that accelerates delivery while preserving product quality.",
-              "Create a unified product experience across surfaces with reusable, testable UI rules.",
-              "Standardize interaction patterns and visual tokens so teams can ship consistent interfaces quickly."
-            ]),
-            brandName: randomChoice(["Bergside", "Northline", "Aster", "Arcflow"]),
-            audience: randomChoice(["Product teams and designers", "SaaS operators and analysts", "Developers and PMs"]),
-            productSurface: randomChoice(["web app", "dashboard", "marketing site", "mobile web"] as const)
-          };
-        case "foundations":
-          return {
-            ...prev,
-            visualStyle: randomChoice([
-              "minimal, data-first, neutral",
-              "clean, modern, functional",
-              "bold, high-contrast, geometric"
-            ]),
-            typographyScale: randomChoice([
-              "display-xl, display-lg, heading-lg, heading-md, body-lg, body-md, caption-sm",
-              "hero, title-1, title-2, body-1, body-2, label, caption",
-              "h1, h2, h3, h4, body, small, overline"
-            ]),
-            colorPalette: randomChoice([
-              "text-primary #111827, text-secondary #4B5563, bg-primary #FFFFFF, bg-secondary #F9FAFB, accent-primary #2563EB, success #16A34A, warning #D97706, danger #DC2626",
-              "text-primary #0F172A, text-secondary #475569, bg-primary #FFFFFF, bg-muted #F8FAFC, accent-primary #7C3AED, success #22C55E, warning #F59E0B, danger #EF4444",
-              "text-primary #1F2937, text-secondary #6B7280, bg-primary #FFFFFF, bg-secondary #F3F4F6, accent-primary #0EA5E9, success #10B981, warning #F97316, danger #E11D48"
-            ]),
-            spacingScale: randomChoice([
-              "space-0, space-1, space-2, space-3, space-4, space-6, space-8, space-12",
-              "xs, sm, md, lg, xl, 2xl",
-              "2, 4, 8, 12, 16, 24, 32, 48"
-            ]),
-            motionTokens: randomChoice([
-              "duration-fast 120ms, duration-base 200ms, ease-standard",
-              "duration-fast 100ms, duration-medium 180ms, duration-slow 260ms, ease-emphasized",
-              "motion-none, motion-subtle 140ms, motion-default 220ms"
-            ])
-          };
-        case "components":
-          return {
-            ...prev,
-            componentFamilies: randomChoice([
-              "buttons, inputs, forms, navigation, overlays, feedback, data display",
-              "buttons, fields, table, tabs, modal, toast, empty state",
-              "actions, forms, navigation, cards, data visualization, notifications"
-            ]),
-            includeTypeUiNote: Math.random() > 0.5
-          };
-        case "accessibility":
-          return {
-            ...prev,
-            accessibilityTarget: randomChoice(["WCAG 2.2 AA", "WCAG 2.1 AA", "WCAG 2.2 AAA"])
-          };
-        case "rules":
-          return {
-            ...prev,
-            writingTone: randomChoice([
-              "concise, confident, implementation-focused",
-              "pragmatic, direct, standards-first",
-              "clear, explicit, developer-friendly"
-            ]),
-            rulesDo:
-              "Use semantic tokens, not raw hex values in component guidance.\nDefine all required states: default, hover, focus-visible, active, disabled, loading, error.\nSpecify responsive behavior and edge-case handling.",
-            rulesDont:
-              "Do not allow low-contrast text or hidden focus indicators.\nDo not introduce one-off spacing or typography exceptions.\nDo not use ambiguous labels or non-descriptive actions.",
-            workflow:
-              "Restate design intent in one sentence.\nDefine foundations and tokens.\nDefine component anatomy, variants, and interactions.\nAdd accessibility acceptance criteria.\nAdd anti-patterns and migration notes.\nEnd with QA checklist.",
-            qualityGates:
-              "Every non-negotiable rule uses \"must\".\nEvery recommendation uses \"should\".\nEvery accessibility rule is testable in implementation.\nPrefer system consistency over local visual exceptions."
-          };
-        case "review":
-        default:
-          return prev;
-      }
-    });
-    setError(null);
-  };
-
-  const resetCurrentStep = () => {
-    const fields = STEP_FIELDS[activeStep.id];
-    if (!fields.length) {
-      return;
-    }
-    setFormState((prev) => {
-      const next = { ...prev };
-      for (const field of fields) {
-        next[field] = DEFAULT_FORM_STATE[field] as never;
-      }
-      return next;
-    });
-    setError(null);
-  };
-
-  const goNext = () => {
-    const validationError = validateStep(stepIndex, formState);
-    if (validationError) {
-      setError(validationError);
-      return;
+  const statusText = useMemo<string | null>(() => {
+    if (status === "loading") {
+      return "Extracting local styles, variables, and components...";
     }
 
-    setError(null);
-    setStepIndex((prev) => Math.min(prev + 1, STEPS.length - 1));
-  };
+    if (status === "success") {
+      return null;
+    }
 
-  const goBack = () => {
-    setError(null);
-    setStepIndex((prev) => Math.max(prev - 1, 0));
-  };
+    if (status === "error") {
+      return "Extraction failed. Fix the issue and run extraction again.";
+    }
 
-  const copyMarkdown = async () => {
+    return null;
+  }, [status]);
+
+  const designDirty = generatedDesignMarkdown.length > 0 && designMarkdown !== generatedDesignMarkdown;
+  const skillDirty = generatedSkillMarkdown.length > 0 && skillMarkdown !== generatedSkillMarkdown;
+
+  const copyDesign = async () => {
     try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        await navigator.clipboard.writeText(markdown);
-      } else if (!fallbackCopy(markdown)) {
-        throw new Error("Fallback copy failed");
-      }
-      setCopyState("copied");
+      const copied = await copyMarkdown(designMarkdown);
+      setDesignCopyState(copied ? "copied" : "failed");
     } catch (_error) {
-      setCopyState("failed");
+      setDesignCopyState("failed");
     }
 
-    window.setTimeout(() => setCopyState("idle"), 1800);
+    window.setTimeout(() => setDesignCopyState("idle"), 1800);
+  };
+
+  const copySkill = async () => {
+    try {
+      const copied = await copyMarkdown(skillMarkdown);
+      setSkillCopyState(copied ? "copied" : "failed");
+    } catch (_error) {
+      setSkillCopyState("failed");
+    }
+
+    window.setTimeout(() => setSkillCopyState("idle"), 1800);
+  };
+
+  const activeFileName = activeDoc === "design" ? "DESIGN.md" : "SKILL.md";
+  const activeMarkdown = activeDoc === "design" ? designMarkdown : skillMarkdown;
+  const activeDirty = activeDoc === "design" ? designDirty : skillDirty;
+  const activeCopyState = activeDoc === "design" ? designCopyState : skillCopyState;
+
+  const copyActive = async () => {
+    if (activeDoc === "design") {
+      await copyDesign();
+      return;
+    }
+
+    await copySkill();
+  };
+
+  const updateActive = (value: string) => {
+    if (activeDoc === "design") {
+      setDesignMarkdown(value);
+      return;
+    }
+
+    setSkillMarkdown(value);
   };
 
   return (
     <main className="app">
       <header className="header">
-        <h1>Figma Skill Generator</h1>
-        <p>
-          Build a <code>skill.md</code> file for your design system configuration that can be used to share across
-          agentic tools like Claude Code, Open Code, Cursor, and more. The configuration is built based on the{" "}
-          <a href="https://www.typeui.sh" target="_blank" rel="noreferrer">
-            typeui.sh
-          </a>{" "}
-          configuration.
-        </p>
+        <div className="header-top">
+          <div>
+            <h1>Figma DESIGN.md Generator - TypeUI</h1>
+            <p>
+              Automatically extracts local Figma style guidelines and creates editable <code>DESIGN.md</code> and <code>SKILL.md</code> drafts. Based on <a href="https://typeui.sh" target="_blank" rel="noopener noreferrer">TypeUI</a> configuration.
+            </p>
+          </div>
+          <a
+            className="repo-link"
+            href={GITHUB_REPO_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label={`GitHub repository ${PLUGIN_VERSION}`}
+            title="Open GitHub repository"
+          >
+            <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82a7.53 7.53 0 012 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0016 8c0-4.42-3.58-8-8-8z" />
+            </svg>
+            <span>{PLUGIN_VERSION}</span>
+          </a>
+        </div>
       </header>
 
-      <section className="stepper">
-        <div className="step-info">
-          <p className="step-current">{activeStep.title}</p>
-          <p className="step-meta">
-            Step {stepIndex + 1} of {STEPS.length}
+      {error ? <p className="error">{error}</p> : null}
+
+      {guidelines ? (
+        <section className="summary">
+          <p className="summary-line">
+            <strong>Source:</strong> {guidelines.fileName} / {guidelines.pageName}
           </p>
-        </div>
-        <div className="step-tools">
-          <button type="button" className="btn" onClick={randomizeCurrentStep} disabled={activeStep.id === "review"}>
-            🪄 Randomize
-          </button>
-          <button type="button" className="btn" onClick={resetCurrentStep} disabled={activeStep.id === "review"}>
-            ↻ Reset fields
-          </button>
-        </div>
+          <p className="summary-line">
+            <strong>Extracted:</strong> {formatDate(guidelines.extractedAt)}
+          </p>
+          <p className="summary-line">
+            <strong>Counts:</strong> {guidelines.colorTokens.length} colors, {guidelines.typographyTokens.length} text styles, {guidelines.spacingTokens.length} spacing tokens, {guidelines.componentFamilies.length} component families
+          </p>
+        </section>
+      ) : null}
+
+      <section className="doc-toggle" role="tablist" aria-label="Generated markdown files">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeDoc === "design"}
+          className={`toggle-btn ${activeDoc === "design" ? "toggle-btn-active" : ""}`}
+          onClick={() => setActiveDoc("design")}
+        >
+          DESIGN.md
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeDoc === "skill"}
+          className={`toggle-btn ${activeDoc === "skill" ? "toggle-btn-active" : ""}`}
+          onClick={() => setActiveDoc("skill")}
+        >
+          SKILL.md
+        </button>
       </section>
 
-      <section className="panel">
-        <h2>{activeStep.title}</h2>
-        {error ? <p className="error">{error}</p> : null}
-
-        {activeStep.id === "identity" && (
-          <div className="grid">
-            <label>
-              Skill name scope
-              <input
-                value={formState.skillNameScope}
-                onChange={(event) => setField("skillNameScope", event.target.value)}
-                placeholder="brand-or-scope"
-              />
-            </label>
-            <label>
-              Design system name
-              <input
-                value={formState.designSystemName}
-                onChange={(event) => setField("designSystemName", event.target.value)}
-              />
-            </label>
-            <label>
-              Skill description
-              <textarea
-                value={formState.skillDescription}
-                onChange={(event) => setField("skillDescription", event.target.value)}
-                rows={4}
-              />
-            </label>
-          </div>
-        )}
-
-        {activeStep.id === "brand" && (
-          <div className="grid">
-            <label>
-              Mission
-              <textarea value={formState.mission} onChange={(event) => setField("mission", event.target.value)} rows={4} />
-            </label>
-            <label>
-              Product/brand
-              <input value={formState.brandName} onChange={(event) => setField("brandName", event.target.value)} />
-            </label>
-            <label>
-              Audience
-              <input value={formState.audience} onChange={(event) => setField("audience", event.target.value)} />
-            </label>
-            <label>
-              Product surface
-              <select
-                value={formState.productSurface}
-                onChange={(event) => setField("productSurface", event.target.value as SkillFormState["productSurface"])}
-              >
-                <option value="web app">web app</option>
-                <option value="marketing site">marketing site</option>
-                <option value="dashboard">dashboard</option>
-                <option value="mobile web">mobile web</option>
-                <option value="other">other</option>
-              </select>
-            </label>
-            {formState.productSurface === "other" ? (
-              <label>
-                Custom product surface
-                <input
-                  value={formState.productSurfaceOther}
-                  onChange={(event) => setField("productSurfaceOther", event.target.value)}
-                  placeholder="desktop app"
-                />
-              </label>
-            ) : null}
-          </div>
-        )}
-
-        {activeStep.id === "foundations" && (
-          <div className="grid">
-            <label>
-              Visual style keywords
-              <input value={formState.visualStyle} onChange={(event) => setField("visualStyle", event.target.value)} />
-            </label>
-            <label>
-              Typography scale (comma or newline separated)
-              <textarea
-                value={formState.typographyScale}
-                onChange={(event) => setField("typographyScale", event.target.value)}
-                rows={3}
-              />
-            </label>
-            <label>
-              Color palette tokens
-              <textarea
-                value={formState.colorPalette}
-                onChange={(event) => setField("colorPalette", event.target.value)}
-                rows={4}
-              />
-            </label>
-            <label>
-              Spacing scale tokens
-              <textarea
-                value={formState.spacingScale}
-                onChange={(event) => setField("spacingScale", event.target.value)}
-                rows={3}
-              />
-            </label>
-            <label>
-              Motion tokens
-              <textarea
-                value={formState.motionTokens}
-                onChange={(event) => setField("motionTokens", event.target.value)}
-                rows={3}
-              />
-            </label>
-          </div>
-        )}
-
-        {activeStep.id === "components" && (
-          <div className="grid">
-            <label>
-              Component families
-              <textarea
-                value={formState.componentFamilies}
-                onChange={(event) => setField("componentFamilies", event.target.value)}
-                rows={4}
-              />
-            </label>
-          </div>
-        )}
-
-        {activeStep.id === "accessibility" && (
-          <div className="grid">
-            <label>
-              Accessibility target
-              <input
-                value={formState.accessibilityTarget}
-                onChange={(event) => setField("accessibilityTarget", event.target.value)}
-              />
-            </label>
-            <label className="checkbox">
-              <input
-                type="checkbox"
-                checked={formState.includeTypeUiNote}
-                onChange={(event) => setField("includeTypeUiNote", event.target.checked)}
-              />
-              Include TypeUI and agentic integration note
-            </label>
-          </div>
-        )}
-
-        {activeStep.id === "rules" && (
-          <div className="grid">
-            <label>
-              Writing tone
-              <input value={formState.writingTone} onChange={(event) => setField("writingTone", event.target.value)} />
-            </label>
-            <label>
-              Rules: Do
-              <textarea value={formState.rulesDo} onChange={(event) => setField("rulesDo", event.target.value)} rows={5} />
-            </label>
-            <label>
-              Rules: Don&apos;t
-              <textarea value={formState.rulesDont} onChange={(event) => setField("rulesDont", event.target.value)} rows={5} />
-            </label>
-            <label>
-              Guideline workflow
-              <textarea value={formState.workflow} onChange={(event) => setField("workflow", event.target.value)} rows={6} />
-            </label>
-            <label>
-              Quality gates
-              <textarea
-                value={formState.qualityGates}
-                onChange={(event) => setField("qualityGates", event.target.value)}
-                rows={5}
-              />
-            </label>
-          </div>
-        )}
-
-        {activeStep.id === "review" && (
-          <div className="grid">
-            <p className="info">
-              This is the final output that you can add to agentic tools. You can check out more curated design systems
-              on{" "}
-              <a href="https://www.typeui.sh/design-systems" target="_blank" rel="noreferrer">
-                typeui.sh
-              </a>{" "}
-              for examples.
-            </p>
+      <section className="docs-grid">
+        <article className="doc-panel">
+          <div className="doc-header">
+            <h2>{activeFileName}</h2>
             <div className="row">
-              <button type="button" className="btn btn-primary" onClick={copyMarkdown}>
-                Copy markdown
+              <button type="button" className="btn" onClick={copyActive} disabled={!activeMarkdown}>
+                Copy
               </button>
-              <button type="button" className="btn" onClick={() => downloadMarkdown(markdown)}>
-                Download .md
+              <button
+                type="button"
+                className="btn"
+                onClick={() => downloadMarkdown(activeMarkdown, activeFileName)}
+                disabled={!activeMarkdown}
+              >
+                Download
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={runExtraction}
+                disabled={status === "loading"}
+                aria-label={status === "loading" ? "Extraction in progress" : "Refresh"}
+                title={status === "loading" ? "Extracting..." : "Refresh"}
+              >
+                Refresh
               </button>
             </div>
-            {copyState === "copied" ? <p className="success">Copied to clipboard.</p> : null}
-            {copyState === "failed" ? <p className="error">Copy failed. Use download instead.</p> : null}
-            <textarea readOnly value={markdown} rows={22} className="preview" />
           </div>
-        )}
+          <p className="muted">{activeDirty ? "Edited" : "Generated"}</p>
+          {activeCopyState === "copied" ? <p className="success">Copied to clipboard.</p> : null}
+          {activeCopyState === "failed" ? <p className="error">Copy failed. Use download instead.</p> : null}
+          <textarea
+            className="preview"
+            value={activeMarkdown}
+            onChange={(event) => updateActive(event.target.value)}
+            spellCheck={false}
+          />
+        </article>
       </section>
 
       <footer className="actions">
-        <button type="button" className="btn" onClick={goBack} disabled={stepIndex === 0}>
-          Back
+        <p className="footer-note">
+          Find more curated design skills at{" "}
+          <a href={TYPEUI_DESIGN_SKILLS_URL} target="_blank" rel="noopener noreferrer">
+            TypeUI
+          </a>{" "}
+          and improve UI generation with AI.
+        </p>
+        <button type="button" className="btn" onClick={() => postToMain({ type: "close-plugin" })}>
+          Close Plugin
         </button>
-        {stepIndex < STEPS.length - 1 ? (
-          <button type="button" className="btn btn-primary" onClick={goNext}>
-            Next
-          </button>
-        ) : (
-          <button type="button" className="btn" onClick={() => postToMain({ type: "close-plugin" })}>
-            Close Plugin
-          </button>
-        )}
       </footer>
     </main>
   );

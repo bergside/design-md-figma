@@ -6,10 +6,18 @@ import {
   TYPEUI_SH_MANAGED_END,
   TYPEUI_SH_MANAGED_START
 } from "./blueprint";
-import { SkillFormState } from "./types";
+import { ExtractedStyleGuidelines, SkillFormState } from "./types";
 
 function listToBullets(values: string[]): string {
   return values.map((value) => `- ${value}`).join("\n");
+}
+
+function listToBulletsOrFallback(values: string[], fallback: string): string {
+  if (!values.length) {
+    return `- ${fallback}`;
+  }
+
+  return listToBullets(values);
 }
 
 function numberToList(values: string[]): string {
@@ -105,6 +113,66 @@ export function generateSkillMarkdown(state: SkillFormState): string {
     typeUiNote,
     "",
     TYPEUI_SH_MANAGED_END,
+    ""
+  ]
+    .filter((line, idx, arr) => !(line === "" && arr[idx - 1] === ""))
+    .join("\n");
+
+  return markdown.trimEnd() + "\n";
+}
+
+export function generateDesignMarkdown(guidelines: ExtractedStyleGuidelines): string {
+  const normalizedName = normalizeSkillName(guidelines.fileName) || "design-system";
+
+  const markdown = [
+    "---",
+    `name: ${normalizedName}`,
+    `source_file: ${guidelines.fileName}`,
+    `source_page: ${guidelines.pageName}`,
+    `generated_at: ${guidelines.extractedAt}`,
+    "---",
+    "",
+    `# ${guidelines.fileName} Design Guidelines`,
+    "",
+    "## Source",
+    `- Figma file: ${guidelines.fileName}`,
+    `- Figma page: ${guidelines.pageName}`,
+    `- Extracted at: ${guidelines.extractedAt}`,
+    "",
+    "## Variable Collections",
+    listToBulletsOrFallback(guidelines.variableCollections, "No local variable collections found."),
+    "",
+    "## Color Tokens",
+    listToBulletsOrFallback(guidelines.colorTokens, "No local paint styles or color variables found."),
+    "",
+    "## Typography Tokens",
+    listToBulletsOrFallback(guidelines.typographyTokens, "No local text styles found."),
+    "",
+    "## Spacing Tokens",
+    listToBulletsOrFallback(guidelines.spacingTokens, "No spacing variables found."),
+    "",
+    "## Radius Tokens",
+    listToBulletsOrFallback(guidelines.radiusTokens, "No radius variables found."),
+    "",
+    "## Motion Tokens",
+    listToBulletsOrFallback(guidelines.motionTokens, "No motion variables found."),
+    "",
+    "## Effect Styles",
+    listToBulletsOrFallback(guidelines.effectTokens, "No local effect styles found."),
+    "",
+    "## Grid Styles",
+    listToBulletsOrFallback(guidelines.gridTokens, "No local grid styles found."),
+    "",
+    "## Component Families",
+    listToBulletsOrFallback(
+      guidelines.componentFamilies,
+      "No components were found on the current page. Add component sets to improve guideline coverage."
+    ),
+    "",
+    "## Editing Notes",
+    "- Refine this file after extraction to add brand context and rationale.",
+    "- Keep token names synchronized with Figma styles and variables.",
+    "- Add usage examples and anti-patterns for critical components.",
     ""
   ]
     .filter((line, idx, arr) => !(line === "" && arr[idx - 1] === ""))
