@@ -19,9 +19,9 @@ Load the plugin in Figma Desktop:
    ```
 
 3. In Figma Desktop:
-   1. Open **Plugins -> Development -> Import plugin from manifest...**
-   2. Select `manifest.json` from this project
-   3. Run **Design MD Skill Generator**
+   - Open **Plugins -> Development -> Import plugin from manifest...**
+   - Select `manifest.json` from this project
+   - Run **Design MD Skill Generator**
 
 ## Curated design skills
 
