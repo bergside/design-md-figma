@@ -60,10 +60,11 @@ body {
   white-space: nowrap;
 }
 
-.repo-link svg {
-  width: 14px;
-  height: 14px;
-  fill: currentColor;
+.repo-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .repo-link:hover {
