@@ -1,5 +1,9 @@
 # DESIGN.md generator for Figma - TypeUI
 
+<img width="1200" height="630" alt="Group 244" src="https://github.com/user-attachments/assets/48d1aca5-2dca-4a73-b634-1e0bf844d849" />
+
+<br/>
+
 This Figma plugin extracts local styles and system signals from the current file and generates editable `DESIGN.md` and `SKILL.md` outputs that you can use with tools such as Google Stitch, Claude Code, Codex, and others to build interfaces with a consistent design-system blueprint. The generated files are based on the open-source [TypeUI DESIGN.md](https://www.typeui.sh/design-md) format.
 
 ## Getting started
