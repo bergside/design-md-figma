@@ -88,3 +88,20 @@ npm run typecheck
 ## License
 
 This project is open-source under the MIT License.
+
+## Sponsors
+
+A huge thank you to the companies supporting our open-source work.
+
+<table width="100%">
+  <tr>
+    <td align="center" width="33%">
+      <a href="https://www.skybridge.tech/" target="_blank" rel="noopener noreferrer">
+        <img src="https://github.com/user-attachments/assets/88c401ee-b19b-4b78-9a7e-325337dba529" alt="Skybridge" width="300" />
+        <br /><b>Skybridge</b>
+      </a>
+    </td>
+  </tr>
+</table>
+
+Want to see your logo here? [Become a sponsor](https://www.typeui.sh/sponsor).
